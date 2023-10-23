@@ -9,24 +9,31 @@ using WebLoadBalancer.Models;
 
 namespace WebLoadBalancer.Controllers
 {
-    public class AccountController : Controller
+    public class web_userController : Controller
     {
-        private readonly WebDbContext _context;
+        private readonly ApplicationContext _context;
 
-        public AccountController(WebDbContext context)
+        public web_userController(ApplicationContext context)
         {
             _context = context;
         }
 
-        // GET: Account
-        public async Task<IActionResult> Index()
+        // GET: web_user
+        public async Task<IActionResult> GetUser(int userId)
         {
-              return _context.Users != null ? 
-                          View(await _context.Users.ToListAsync()) :
-                          Problem("Entity set 'WebDbContext.Users'  is null.");
+            // Виконати запит до таблиці User за UserId
+            var user = await _context.Users.FindAsync(userId);
+
+            if (user == null)
+            {
+                // Користувача не знайдено, можна обробити відсутність користувача тут
+                return NotFound();
+            }
+
+            return View(user);
         }
 
-        // GET: Account/Details/5
+        // GET: web_user/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null || _context.Users == null)
@@ -34,39 +41,39 @@ namespace WebLoadBalancer.Controllers
                 return NotFound();
             }
 
-            var user = await _context.Users
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (user == null)
+            var web_user = await _context.Users
+                .FirstOrDefaultAsync(m => m.user_id == id);
+            if (web_user == null)
             {
                 return NotFound();
             }
 
-            return View(user);
+            return View(web_user);
         }
 
-        // GET: Account/Create
+        // GET: web_user/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Account/Create
+        // POST: web_user/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Email,User_password")] User user)
+        public async Task<IActionResult> Create([Bind("user_id,email,user_password,username")] web_user web_user)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(user);
+                _context.Add(web_user);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(user);
+            return View(web_user);
         }
 
-        // GET: Account/Edit/5
+        // GET: web_user/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null || _context.Users == null)
@@ -74,22 +81,22 @@ namespace WebLoadBalancer.Controllers
                 return NotFound();
             }
 
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
+            var web_user = await _context.Users.FindAsync(id);
+            if (web_user == null)
             {
                 return NotFound();
             }
-            return View(user);
+            return View(web_user);
         }
 
-        // POST: Account/Edit/5
+        // POST: web_user/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Email,User_password")] User user)
+        public async Task<IActionResult> Edit(int id, [Bind("user_id,email,user_password,username")] web_user web_user)
         {
-            if (id != user.Id)
+            if (id != web_user.user_id)
             {
                 return NotFound();
             }
@@ -98,12 +105,12 @@ namespace WebLoadBalancer.Controllers
             {
                 try
                 {
-                    _context.Update(user);
+                    _context.Update(web_user);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!UserExists(user.Id))
+                    if (!web_userExists(web_user.user_id))
                     {
                         return NotFound();
                     }
@@ -114,10 +121,10 @@ namespace WebLoadBalancer.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(user);
+            return View(web_user);
         }
 
-        // GET: Account/Delete/5
+        // GET: web_user/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Users == null)
@@ -125,38 +132,38 @@ namespace WebLoadBalancer.Controllers
                 return NotFound();
             }
 
-            var user = await _context.Users
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (user == null)
+            var web_user = await _context.Users
+                .FirstOrDefaultAsync(m => m.user_id == id);
+            if (web_user == null)
             {
                 return NotFound();
             }
 
-            return View(user);
+            return View(web_user);
         }
 
-        // POST: Account/Delete/5
+        // POST: web_user/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             if (_context.Users == null)
             {
-                return Problem("Entity set 'WebDbContext.Users'  is null.");
+                return Problem("Entity set 'ApplicationContext.Users'  is null.");
             }
-            var user = await _context.Users.FindAsync(id);
-            if (user != null)
+            var web_user = await _context.Users.FindAsync(id);
+            if (web_user != null)
             {
-                _context.Users.Remove(user);
+                _context.Users.Remove(web_user);
             }
             
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private bool UserExists(int id)
+        private bool web_userExists(int id)
         {
-          return (_context.Users?.Any(e => e.Id == id)).GetValueOrDefault();
+          return (_context.Users?.Any(e => e.user_id == id)).GetValueOrDefault();
         }
     }
 }

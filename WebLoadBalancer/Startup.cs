@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using WebLoadBalancer.Models;
 
+
 namespace WebLoadBalancer
 {
     public class Startup
@@ -20,9 +21,10 @@ namespace WebLoadBalancer
 
         public void ConfigureServices(IServiceCollection services)
         {
-            string connectionString = Configuration.GetConnectionString("DefaultConnection");
-            services.AddDbContext<WebDbContext>(options =>
-                options.UseNpgsql(connectionString));
+            services.AddDbContext<ApplicationContext>(options =>
+                options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"))
+            );
+            services.AddScoped<ApplicationContext>();
             services.AddControllersWithViews();
         }
 
