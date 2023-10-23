@@ -13,7 +13,6 @@ namespace WebLoadBalancer.Models
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Використовуйте Fluent API для налаштування відповідності між моделями та таблицями.
             modelBuilder.Entity<web_user>().ToTable("web_user");
             modelBuilder.Entity<EquationSol>().ToTable("equation");
         }
