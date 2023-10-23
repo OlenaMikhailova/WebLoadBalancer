@@ -9,31 +9,22 @@ using WebLoadBalancer.Models;
 
 namespace WebLoadBalancer.Controllers
 {
-    public class web_userController : Controller
+    public class UserController : Controller
     {
         private readonly ApplicationContext _context;
 
-        public web_userController(ApplicationContext context)
+        public UserController(ApplicationContext context)
         {
             _context = context;
         }
 
-        // GET: web_user
-        public async Task<IActionResult> GetUser(int userId)
+        // GET: User
+        public async Task<IActionResult> Index()
         {
-            // Виконати запит до таблиці User за UserId
-            var user = await _context.Users.FindAsync(userId);
-
-            if (user == null)
-            {
-                // Користувача не знайдено, можна обробити відсутність користувача тут
-                return NotFound();
-            }
-
-            return View(user);
+            return View(_context.Users);
         }
 
-        // GET: web_user/Details/5
+        // GET: User/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null || _context.Users == null)
@@ -51,13 +42,13 @@ namespace WebLoadBalancer.Controllers
             return View(web_user);
         }
 
-        // GET: web_user/Create
+        // GET: User/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: web_user/Create
+        // POST: User/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
@@ -73,7 +64,7 @@ namespace WebLoadBalancer.Controllers
             return View(web_user);
         }
 
-        // GET: web_user/Edit/5
+        // GET: User/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null || _context.Users == null)
@@ -89,7 +80,7 @@ namespace WebLoadBalancer.Controllers
             return View(web_user);
         }
 
-        // POST: web_user/Edit/5
+        // POST: User/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
@@ -124,7 +115,7 @@ namespace WebLoadBalancer.Controllers
             return View(web_user);
         }
 
-        // GET: web_user/Delete/5
+        // GET: User/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Users == null)
@@ -142,7 +133,7 @@ namespace WebLoadBalancer.Controllers
             return View(web_user);
         }
 
-        // POST: web_user/Delete/5
+        // POST: User/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
