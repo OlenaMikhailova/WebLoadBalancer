@@ -124,7 +124,7 @@ namespace WebLoadBalancer.Controllers
             }
 
             var web_user = await _context.Users
-                .FirstOrDefaultAsync(m => m.user_id == id);
+                .FirstOrDefaultAsync(m => m.user_id == (int)id);
             if (web_user == null)
             {
                 return NotFound();
@@ -147,14 +147,14 @@ namespace WebLoadBalancer.Controllers
             {
                 _context.Users.Remove(web_user);
             }
-            
+
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool web_userExists(int id)
         {
-          return (_context.Users?.Any(e => e.user_id == id)).GetValueOrDefault();
+            return (_context.Users?.Any(e => e.user_id == id)).GetValueOrDefault();
         }
     }
 }

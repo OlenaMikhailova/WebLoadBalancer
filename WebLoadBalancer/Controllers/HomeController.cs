@@ -15,8 +15,6 @@ namespace WebLoadBalancer.Controllers
             _context = context;
         }
 
-
-
         public IActionResult Index()
         {
             bool isConnected = _context.IsDatabaseConnected();

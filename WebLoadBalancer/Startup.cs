@@ -4,9 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using WebLoadBalancer.Models;
-
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace WebLoadBalancer
 {
@@ -24,7 +24,15 @@ namespace WebLoadBalancer
             services.AddDbContext<ApplicationContext>(options =>
                 options.UseNpgsql(Configuration.GetConnectionString("DefaultConnection"))
             );
-            services.AddScoped<ApplicationContext>();
+
+            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = new PathString("/Account/Login");
+                    options.AccessDeniedPath = new PathString("/Account/Login");
+                });
+            services.AddAuthorization();
+
             services.AddControllersWithViews();
         }
 
@@ -52,8 +60,9 @@ namespace WebLoadBalancer
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{controller=Account}/{action=Login}/{id?}");
             });
+
         }
     }
 }
