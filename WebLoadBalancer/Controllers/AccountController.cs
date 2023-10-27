@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using WebLoadBalancer.Models;
 using WebLoadBalancer.ViewModels;
+using BCrypt.Net;
 
 namespace WebLoadBalancer.Controllers
 {
@@ -40,8 +41,8 @@ namespace WebLoadBalancer.Controllers
         {
             if (ModelState.IsValid)
             {
-                web_user user = await _context.Users.FirstOrDefaultAsync(u => u.email == model.email && u.user_password == model.user_password);
-                if (user != null)
+                web_user user = await _context.Users.FirstOrDefaultAsync(u => u.email == model.email);
+                if (user != null && BCrypt.Net.BCrypt.Verify(model.user_password, user.user_password))
                 {
                     await Authenticate(user);
                     return RedirectToAction("Index", "Home");
@@ -68,7 +69,8 @@ namespace WebLoadBalancer.Controllers
                 web_user user = await _context.Users.FirstOrDefaultAsync(u => u.email == model.email);
                 if (user == null)
                 {
-                    user = new web_user { email = model.email, user_password = model.user_password, username = model.username };
+                    string hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.user_password);
+                    user = new web_user { email = model.email, user_password = hashedPassword, username = model.username };
                     _context.Users.Add(user);
                     await _context.SaveChangesAsync();
 
@@ -86,7 +88,7 @@ namespace WebLoadBalancer.Controllers
         {
             var claim = new List<Claim>()
             {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, user.email),
+                new Claim(ClaimsIdentity.DefaultNameClaimType, user.username),
             };
 
             var claimsIdentity = new ClaimsIdentity(claim, CookieAuthenticationDefaults.AuthenticationScheme);
