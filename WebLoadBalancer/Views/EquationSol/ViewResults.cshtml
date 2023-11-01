@@ -1,0 +1,24 @@
+﻿
+@model List<EquationSol>
+
+<h2>Your Equations and Solutions</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Equation Name</th>
+            <th>View Solution</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var equation in Model)
+        {
+            <tr>
+                <td>@equation.equation_name</td>
+                <td>
+                    <a asp-action="DownloadSolution" asp-route-id="@equation.task_id">Download Solution</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,11 @@
+﻿@model WebLoadBalancer.ViewModels.EquationSolViewModel
+
+
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label asp-for="EquationFile"></label>
+        <input asp-for="EquationFile" type="file" accept =".txt" class="form-control" />
+        <span asp-validation-for="EquationFile" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Solve</button>
+</form>
