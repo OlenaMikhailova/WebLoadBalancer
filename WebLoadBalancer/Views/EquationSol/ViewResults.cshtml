@@ -1,5 +1,4 @@
-﻿
-@model List<EquationSol>
+﻿@model List<EquationSol>
 
 <h2>Your Equations and Solutions</h2>
 
@@ -7,7 +6,8 @@
     <thead>
         <tr>
             <th>Equation Name</th>
-            <th>View Solution</th>
+            <th>Download Equation</th>
+            <th>Download Solution</th>
         </tr>
     </thead>
     <tbody>
@@ -16,7 +16,14 @@
             <tr>
                 <td>@equation.equation_name</td>
                 <td>
-                    <a asp-action="DownloadSolution" asp-route-id="@equation.task_id">Download Solution</a>
+                    <form asp-action="DownloadEquation" asp-controller="EquationSol" method="get">
+                        <button type="submit" class="btn btn-primary">Download Equation</button>
+                    </form>
+                </td>
+                <td>
+                    <form asp-action="DownloadSolution" asp-controller="EquationSol" method="get">
+                        <button type="submit" class="btn btn-primary">Download Solution</button>
+                    </form>
                 </td>
             </tr>
         }
