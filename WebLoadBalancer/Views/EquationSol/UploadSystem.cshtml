@@ -8,4 +8,47 @@
         <span asp-validation-for="EquationFile" class="text-danger"></span>
     </div>
     <button type="submit" class="btn btn-primary">Solve</button>
+
 </form>
+
+@* <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.11/signalr.min.js"></script>
+<div id="progressBarContainer">
+    <div id="progressBar" style="width: 0;"></div>
+</div>
+
+<script>
+    function connectToHub() {
+        return new Promise(function (resolve, reject) {
+            var connection = new signalR.HubConnectionBuilder().withUrl("/progressHub").build();
+
+            connection.start().then(function () {
+                console.log("Connected to SignalR Hub");
+                resolve(connection);
+            }).catch(function (error) {
+                console.error("Error connecting to SignalR Hub: " + error);
+                reject(error);
+            });
+        });
+    }
+
+    function startProgressTracking() {
+        connectToHub().then(function (connection) {
+            connection.on("ReceiveProgress", function (progress) {
+                var progressBar = document.getElementById("progressBar");
+                progressBar.style.width = progress + "%";
+            });
+        }).catch(function (error) {
+            // Обробка помилки при підключенні до Hub
+        });
+    }
+
+    startProgressTracking();
+</script> *@
+
+@if (ViewBag.SolutionData != null)
+{
+    <h3>Solution:</h3>
+    <a href="@Url.Action("DownloadSolutionPlain")">Download Solution</a>
+}
+

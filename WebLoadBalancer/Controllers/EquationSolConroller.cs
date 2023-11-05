@@ -1,12 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using WebLoadBalancer.Hubs;
 using WebLoadBalancer.Models;
 using WebLoadBalancer.ViewModels;
 
@@ -16,10 +20,12 @@ namespace WebLoadBalancer.Controllers
     public class EquationSolController : Controller
     {
         private readonly ApplicationContext _context;
+        private readonly IHubContext<ProgressHub> _hubContext;
 
-        public EquationSolController(ApplicationContext context)
+        public EquationSolController(ApplicationContext context, IHubContext<ProgressHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -31,7 +37,7 @@ namespace WebLoadBalancer.Controllers
         [HttpPost]
         public async Task<IActionResult> UploadSystem(EquationSolViewModel model)
         {
-            if(ModelState.IsValid)
+            if (ModelState.IsValid)
             {
                 if (model.EquationFile != null && model.EquationFile.Length > 0)
                 {
@@ -39,53 +45,99 @@ namespace WebLoadBalancer.Controllers
                     {
                         var lines = reader.ReadToEnd().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
-                        if (lines.Length > 0)
+                        bool isEquationFile = true;
+
+                        foreach (var line in lines)
                         {
-                            var matrix = new double[lines.Length, lines.Length];
-                            var vector = new double[lines.Length];
-
-                            for (int i = 0; i < lines.Length; i++)
+                            if (!line.Contains("|"))
                             {
-                                var parts = lines[i].Split('|');
-                                var coefficients = parts[0].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-                                for (int j = 0; j < lines.Length; j++)
-                                {
-                                    matrix[i, j] = double.Parse(coefficients[j], CultureInfo.InvariantCulture);
-                                }
-
-                                vector[i] = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                                isEquationFile = false;
+                                break;
                             }
+                        }
 
-                            var solution = MethodGaussa(matrix, vector);
-
-                            var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
-                            if (userIdClaim != null)
+                        if (isEquationFile)
+                        {
+                            if (lines.Length > 0)
                             {
-                                string username = userIdClaim.Value;
+                                var matrix = new double[lines.Length, lines.Length];
+                                var vector = new double[lines.Length];
 
-                                var user = _context.Users.FirstOrDefault(u => u.username == username);
-
-                                if (user != null)
+                                for (int i = 0; i < lines.Length; i++)
                                 {
-                                    var equationSol = new EquationSol
+                                    //int progress = (i + 1) * 100 / lines.Length;
+                                    //await _hubContext.Clients.All.SendAsync("ReceiveProgressUpdate", progress);
+
+                                    var parts = lines[i].Split('|');
+                                    
+                                    var coefficients = parts[0].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                                    for (int j = 0; j < coefficients.Length; j++)
                                     {
-                                        user_id = user.user_id,
-                                        equation_name = model.EquationFile.FileName,
-                                        equation = ReadBytesFromIFormFile(model.EquationFile),
-                                        solution = WriteSolutionToBytes(solution)
-                                    };
+                                        if (!double.TryParse(coefficients[j], NumberStyles.Any, CultureInfo.InvariantCulture, out matrix[i, j]))
+                                        {
+                                            ModelState.AddModelError("EquationFile", "The file does not appear to contain a valid equation.");
+                                            return View(model);
+                                        }
+                                    }
 
-                                    _context.EquationSols.Add(equationSol);
-                                    await _context.SaveChangesAsync();
+                                    if (!double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out vector[i]))
+                                    {
+                                        ModelState.AddModelError("EquationFile", "The file does not appear to contain a valid equation.");
+                                        return View(model);
+                                    }
+
+                                    for (int j = 0; j < lines.Length; j++)
+                                    {
+                                        matrix[i, j] = double.Parse(coefficients[j], CultureInfo.InvariantCulture);
+                                    }
+
+                                    vector[i] = double.Parse(parts[1], CultureInfo.InvariantCulture);
                                 }
 
+                                var solution = MethodGaussa(matrix, vector);
+                                byte[] solutionData = WriteSolutionToBytes(solution);
+                                string solutionFileName = Path.GetFileNameWithoutExtension(model.EquationFile.FileName) + "-solution.txt";
+
+                                var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
+                                if (userIdClaim != null)
+                                {
+                                    string username = userIdClaim.Value;
+
+                                    var user = _context.Users.FirstOrDefault(u => u.username == username);
+
+                                    if (user != null)
+                                    {
+
+                                        var equationSol = new EquationSol
+                                        {
+                                            user_id = user.user_id,
+                                            equation_name = model.EquationFile.FileName,
+                                            equation = ReadBytesFromIFormFile(model.EquationFile),
+                                            solution = WriteSolutionToBytes(solution),
+                                            
+                                        };
+                                        
+                                        _context.EquationSols.Add(equationSol);
+                                        await _context.SaveChangesAsync();
+
+                                    }
+                                }
+                                return File(solutionData, "application/octet-stream", solutionFileName);
+
                             }
+                            return View(model);
+                        }
+                        else
+                        {
+                            ModelState.AddModelError("EquationFile", "The file does not appear to contain a valid equation.");
+                            return View(model);
                         }
                     }
                 }
-                return RedirectToAction("ViewResults", "EquationSol");
+                
             }
+            
             return View(model);
         }
 
@@ -110,6 +162,13 @@ namespace WebLoadBalancer.Controllers
                 file.CopyTo(stream);
                 return stream.ToArray();
             }
+        }
+
+        private IFormFile WriteBytesToIFormFile(byte[] data, string fileName)
+        {
+            var stream = new MemoryStream(data);
+            var formFile = new FormFile(stream, 0, data.Length, "data", fileName);
+            return formFile;
         }
 
         private double[] MethodGaussa(double[,] matrix, double[] vector)
@@ -148,6 +207,8 @@ namespace WebLoadBalancer.Controllers
                     }
                     vector[j] -= factor * vector[i];
                 }
+                //int progress = (i + 1) * 100 / n;
+                //_hubContext.Clients.All.SendAsync("SendProgressUpdate", progress);
             }
 
             for (int i = n - 1; i >= 0; i--)
@@ -178,7 +239,7 @@ namespace WebLoadBalancer.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> DownloadSolution(int id)
+        public async Task<IActionResult> DownloadEquation(int id)
         {
             var equationSol = await _context.EquationSols.FindAsync(id);
 
@@ -186,8 +247,33 @@ namespace WebLoadBalancer.Controllers
             {
                 var contentDisposition = new System.Net.Mime.ContentDisposition
                 {
-                    FileName = "solution.txt",
-                    Inline = true,
+                    FileName = equationSol.equation_name,
+                    Inline = false,
+                };
+                Response.Headers.Add("Content-Disposition", contentDisposition.ToString());
+
+                return File(equationSol.equation, "text/plain");
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadSolution(int id)
+        {
+            var equationSol = await _context.EquationSols.FindAsync(id);
+
+            if (equationSol != null)
+            {
+                var equationName = Path.GetFileNameWithoutExtension(equationSol.equation_name);
+                var resultFileName = $"{equationName}-solution.txt";
+
+                var contentDisposition = new System.Net.Mime.ContentDisposition
+                {
+                    FileName = resultFileName,
+                    Inline = false,
                 };
                 Response.Headers.Add("Content-Disposition", contentDisposition.ToString());
 
@@ -197,6 +283,12 @@ namespace WebLoadBalancer.Controllers
             {
                 return NotFound();
             }
+        }
+
+        public FileResult DownloadSolution()
+        {
+            byte[] solutionData = (byte[])ViewBag.SolutionData;
+            return File(solutionData, "application/octet-stream", "solution.txt");
         }
 
     }

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using WebLoadBalancer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using WebLoadBalancer.Hubs;
 
 namespace WebLoadBalancer
 {
@@ -34,6 +35,7 @@ namespace WebLoadBalancer
             services.AddAuthorization();
 
             services.AddControllersWithViews();
+            services.AddSignalR();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -61,6 +63,7 @@ namespace WebLoadBalancer
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Account}/{action=Login}/{id?}");
+                endpoints.MapHub<ProgressHub>("/progressHub");
             });
 
         }

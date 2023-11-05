@@ -1,6 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Runtime.CompilerServices;
-using WebLoadBalancer.Attributes;
 
 namespace WebLoadBalancer.ViewModels
 {
@@ -9,7 +7,9 @@ namespace WebLoadBalancer.ViewModels
         [Display(Name = "Your file with the system of equations")]
         [Required(ErrorMessage = "Select the file with the system of equations")]
         [DataType(DataType.Upload)]
-        [ValidFileExtensions(".txt", ".csv")]
+        [ValidFileExtensions(10485760, ".txt", ".csv")]
         public IFormFile EquationFile { get; set; }
+
+        
     }
 }

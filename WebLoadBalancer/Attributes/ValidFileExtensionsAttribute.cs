@@ -1,36 +1,33 @@
-﻿
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 
-namespace WebLoadBalancer.Attributes
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+public class ValidFileExtensionsAttribute : ValidationAttribute
 {
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
-    public class ValidFileExtensionsAttribute : ValidationAttribute
+    private string[] _allowedExtensions;
+    private long _maxFileSize; 
+
+    public ValidFileExtensionsAttribute(long maxFileSize, params string[] allowedExtensions)
     {
-        private string[] _allowedExtensions;
+        _maxFileSize = maxFileSize;
+        _allowedExtensions = allowedExtensions;
+    }
 
-        public ValidFileExtensionsAttribute(params string[] allowedExtensions)
+    public override bool IsValid(object value)
+    {
+        if (value is IFormFile file)
         {
-            _allowedExtensions = allowedExtensions;
-        }
+            var fileExtension = Path.GetExtension(file.FileName).ToLower();
 
-        public override bool IsValid(object value)
-        {
-            if (value is IFormFile file)
+            if (!string.IsNullOrEmpty(fileExtension) && _allowedExtensions.Contains(fileExtension) && file.Length <= _maxFileSize)
             {
-                var fileExtension = Path.GetExtension(file.FileName).ToLower();
-
-                if (!string.IsNullOrEmpty(fileExtension) && _allowedExtensions.Contains(fileExtension))
-                {
-                    return true;
-                }
+                return true;
             }
-
-            return false;
         }
+
+        return false;
     }
 }
-
