@@ -7,7 +7,7 @@ namespace WebLoadBalancer.Hubs
     {
         public async Task SendProgressUpdate(int progress)
         {
-            Console.WriteLine($"Received progress update: {progress}");
+            //Console.WriteLine($"Received progress update: {progress}");
             await Clients.All.SendAsync("ReceiveProgressUpdate", progress);
         }
     }

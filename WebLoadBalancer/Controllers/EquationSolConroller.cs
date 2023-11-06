@@ -175,6 +175,7 @@ namespace WebLoadBalancer.Controllers
         {
             int n = vector.Length;
             double[] solution = new double[n];
+            int progress;
 
             for (int i = 0; i < n; i++)
             {
@@ -207,8 +208,9 @@ namespace WebLoadBalancer.Controllers
                     }
                     vector[j] -= factor * vector[i];
                 }
-                //int progress = (i + 1) * 100 / n;
-                //_hubContext.Clients.All.SendAsync("SendProgressUpdate", progress);
+                progress = (i + 1) * 100 / n;
+                _hubContext.Clients.All.SendAsync("ReceiveProgressUpdate", progress);
+                Console.WriteLine(progress);
             }
 
             for (int i = n - 1; i >= 0; i--)

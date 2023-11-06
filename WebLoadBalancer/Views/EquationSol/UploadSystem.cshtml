@@ -11,10 +11,12 @@
 
 </form>
 
-@* <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.11/signalr.min.js"></script>
 <div id="progressBarContainer">
-    <div id="progressBar" style="width: 0;"></div>
+    <div id="progressBar" style="width: 0;">
+        <p id="progress_text"></p>
+    </div>
 </div>
 
 <script>
@@ -34,17 +36,17 @@
 
     function startProgressTracking() {
         connectToHub().then(function (connection) {
-            connection.on("ReceiveProgress", function (progress) {
-                var progressBar = document.getElementById("progressBar");
-                progressBar.style.width = progress + "%";
+            connection.on("ReceiveProgressUpdate", function (progress) {
+                document.getElementById("progressBar").style.width = '${ progress }%';
+                
+                document.getElementById('progress_text').innerText = "Progress: " + progress + '%';
             });
         }).catch(function (error) {
-            // Обробка помилки при підключенні до Hub
         });
     }
 
     startProgressTracking();
-</script> *@
+</script>
 
 @if (ViewBag.SolutionData != null)
 {
