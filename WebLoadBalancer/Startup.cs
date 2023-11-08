@@ -61,6 +61,10 @@ namespace WebLoadBalancer
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
+                    name: "balance",
+                    pattern: "balance",
+                    defaults: new { controller = "LoadBalancer", action = "BalanceRequest" });
+                endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Account}/{action=Login}/{id?}");
                 endpoints.MapHub<ProgressHub>("/progressHub");
