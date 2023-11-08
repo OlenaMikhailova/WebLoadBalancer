@@ -2,12 +2,17 @@
 
 <h2>Your Equations and Solutions</h2>
 
+<form asp-action="DeleteAllCalculations" asp-controller="EquationSol" method="post">
+    <button type="submit" name="deleteAll" class="btn btn-danger">Delete all calculations</button>
+</form>
+
 <table class="table">
     <thead>
         <tr>
             <th>Equation Name</th>
             <th>Download Equation</th>
             <th>Download Solution</th>
+            <th>Delete</th>
         </tr>
     </thead>
     <tbody>
@@ -17,12 +22,20 @@
                 <td>@equation.equation_name</td>
                 <td>
                     <form asp-action="DownloadEquation" asp-controller="EquationSol" method="get">
+                        <input type="hidden" name="id" value="@equation.task_id" />
                         <button type="submit" class="btn btn-primary">Download Equation</button>
                     </form>
                 </td>
                 <td>
                     <form asp-action="DownloadSolution" asp-controller="EquationSol" method="get">
+                        <input type="hidden" name="id" value="@equation.task_id" />
                         <button type="submit" class="btn btn-primary">Download Solution</button>
+                    </form>
+                </td>
+                <td>
+                    <form asp-action="DeleteCalculation" asp-controller="EquationSol" method="post">
+                        <input type="hidden" name="id" value="@equation.task_id" />
+                        <button type="submit" class="btn btn-primary">Delete</button>
                     </form>
                 </td>
             </tr>

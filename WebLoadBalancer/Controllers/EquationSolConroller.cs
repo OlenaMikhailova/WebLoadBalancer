@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Globalization;
@@ -21,6 +22,8 @@ namespace WebLoadBalancer.Controllers
     {
         private readonly ApplicationContext _context;
         private readonly IHubContext<ProgressHub> _hubContext;
+        private bool isCalculationCancelled = false;
+        private const int MaxEquationCount = 10;
 
         public EquationSolController(ApplicationContext context, IHubContext<ProgressHub> hubContext)
         {
@@ -39,6 +42,25 @@ namespace WebLoadBalancer.Controllers
         {
             if (ModelState.IsValid)
             {
+                var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
+                if (userIdClaim != null)
+                {
+                    string username = userIdClaim.Value;
+                    var user = _context.Users.FirstOrDefault(u => u.username == username);
+
+                    if (user != null)
+                    {
+                        var equationsCount = _context.EquationSols
+                            .Where(e => e.user_id == user.user_id)
+                            .Count();
+
+                        if (equationsCount >= MaxEquationCount)
+                        {
+                            ModelState.AddModelError("EquationFile", "Досягнута максимальна кількість рівнянь для цього користувача.");
+                            return View(model);
+                        }
+                    }
+                }
                 if (model.EquationFile != null && model.EquationFile.Length > 0)
                 {
                     using (var reader = new StreamReader(model.EquationFile.OpenReadStream()))
@@ -65,9 +87,6 @@ namespace WebLoadBalancer.Controllers
 
                                 for (int i = 0; i < lines.Length; i++)
                                 {
-                                    //int progress = (i + 1) * 100 / lines.Length;
-                                    //await _hubContext.Clients.All.SendAsync("ReceiveProgressUpdate", progress);
-
                                     var parts = lines[i].Split('|');
                                     
                                     var coefficients = parts[0].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
@@ -95,11 +114,12 @@ namespace WebLoadBalancer.Controllers
                                     vector[i] = double.Parse(parts[1], CultureInfo.InvariantCulture);
                                 }
 
+                                
                                 var solution = MethodGaussa(matrix, vector);
                                 byte[] solutionData = WriteSolutionToBytes(solution);
                                 string solutionFileName = Path.GetFileNameWithoutExtension(model.EquationFile.FileName) + "-solution.txt";
 
-                                var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
+                                //var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
                                 if (userIdClaim != null)
                                 {
                                     string username = userIdClaim.Value;
@@ -115,15 +135,25 @@ namespace WebLoadBalancer.Controllers
                                             equation_name = model.EquationFile.FileName,
                                             equation = ReadBytesFromIFormFile(model.EquationFile),
                                             solution = WriteSolutionToBytes(solution),
-                                            
+
                                         };
-                                        
+
+
                                         _context.EquationSols.Add(equationSol);
                                         await _context.SaveChangesAsync();
 
                                     }
                                 }
-                                return File(solutionData, "application/octet-stream", solutionFileName);
+                                if (!isCalculationCancelled)
+                                {
+                                    return File(solutionData, "application/octet-stream", solutionFileName);
+                                }
+                                else
+                                {
+                                    CancelCalculation(model);
+                                }
+
+
 
                             }
                             return View(model);
@@ -140,6 +170,37 @@ namespace WebLoadBalancer.Controllers
             
             return View(model);
         }
+
+        [HttpPost]
+        public async Task<IActionResult> CancelCalculation(EquationSolViewModel model)
+        {
+            
+            var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
+            if (userIdClaim != null)
+            {
+                string username = userIdClaim.Value;
+
+                var user = _context.Users.FirstOrDefault(u => u.username == username);
+
+                if (user != null)
+                {
+                    var lastEquation = _context.EquationSols
+                        .Where(e => e.user_id == user.user_id)
+                        .OrderByDescending(e => e.task_id)
+                        .FirstOrDefault();
+
+                    if (lastEquation != null)
+                    {
+                        _context.EquationSols.Remove(lastEquation);
+                        await _context.SaveChangesAsync();
+                        isCalculationCancelled = true;
+                    }
+                }
+            }
+
+            return RedirectToAction("UploadSystem");
+        }
+
 
         private byte[] WriteSolutionToBytes(double[] solution)
         {
@@ -177,52 +238,61 @@ namespace WebLoadBalancer.Controllers
             double[] solution = new double[n];
             int progress;
 
-            for (int i = 0; i < n; i++)
+            if (!isCalculationCancelled)
             {
-                if (matrix[i, i] == 0)
+                for (int i = 0; i < n; i++)
                 {
-                    for (int j = i + 1; j < n; j++)
+                    if (matrix[i, i] == 0)
                     {
-                        if (matrix[j, i] != 0)
+                        for (int j = i + 1; j < n; j++)
                         {
-                            for (int k = i; k < n; k++)
+                            if (matrix[j, i] != 0)
                             {
-                                double temp = matrix[i, k];
-                                matrix[i, k] = matrix[j, k];
-                                matrix[j, k] = temp;
+                                for (int k = i; k < n; k++)
+                                {
+                                    double temp = matrix[i, k];
+                                    matrix[i, k] = matrix[j, k];
+                                    matrix[j, k] = temp;
+                                }
+                                double tempVector = vector[i];
+                                vector[i] = vector[j];
+                                vector[j] = tempVector;
+                                break;
                             }
-                            double tempVector = vector[i];
-                            vector[i] = vector[j];
-                            vector[j] = tempVector;
-                            break;
                         }
                     }
-                }
 
-                for (int j = i + 1; j < n; j++)
-                {
-                    double factor = matrix[j, i] / matrix[i, i];
-                    for (int k = i; k < n; k++)
+                    for (int j = i + 1; j < n; j++)
                     {
-                        matrix[j, k] -= factor * matrix[i, k];
+                        double factor = matrix[j, i] / matrix[i, i];
+                        for (int k = i; k < n; k++)
+                        {
+                            matrix[j, k] -= factor * matrix[i, k];
+                        }
+                        vector[j] -= factor * vector[i];
                     }
-                    vector[j] -= factor * vector[i];
-                }
-                progress = (i + 1) * 100 / n;
-                _hubContext.Clients.All.SendAsync("ReceiveProgressUpdate", progress);
-                Console.WriteLine(progress);
-            }
+                    progress = (i + 1) * 100 / n;
+                    _hubContext.Clients.All.SendAsync("ReceiveProgressUpdate", progress);
+                    Console.WriteLine(progress);
 
-            for (int i = n - 1; i >= 0; i--)
-            {
-                double sum = 0;
-                for (int j = i + 1; j < n; j++)
-                {
-                    sum += matrix[i, j] * solution[j];
                 }
-                solution[i] = (vector[i] - sum) / matrix[i, i];
+
+
+                for (int i = n - 1; i >= 0; i--)
+                {
+                    double sum = 0;
+                    for (int j = i + 1; j < n; j++)
+                    {
+                        sum += matrix[i, j] * solution[j];
+                    }
+                    solution[i] = (vector[i] - sum) / matrix[i, i];
+                }
+                return solution;
             }
-            return solution;
+            else
+            {
+                return null;
+            }
         }
 
         [HttpGet]
@@ -246,7 +316,8 @@ namespace WebLoadBalancer.Controllers
             var equationSol = await _context.EquationSols.FindAsync(id);
 
             if (equationSol != null)
-            {
+            { 
+
                 var contentDisposition = new System.Net.Mime.ContentDisposition
                 {
                     FileName = equationSol.equation_name,
@@ -287,10 +358,47 @@ namespace WebLoadBalancer.Controllers
             }
         }
 
-        public FileResult DownloadSolution()
+        public FileResult DownloadSolutionPlain()
         {
             byte[] solutionData = (byte[])ViewBag.SolutionData;
             return File(solutionData, "application/octet-stream", "solution.txt");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteAllCalculations()
+        {
+            var userIdClaim = User.FindFirst(ClaimsIdentity.DefaultNameClaimType);
+            if (userIdClaim != null)
+            {
+                string username = userIdClaim.Value;
+                var user = _context.Users.FirstOrDefault(u => u.username == username);
+
+                if (user != null)
+                {
+                    var equationsToDelete = _context.EquationSols
+                        .Where(e => e.user_id == user.user_id)
+                        .ToList();
+
+                    _context.EquationSols.RemoveRange(equationsToDelete);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return RedirectToAction("ViewResults");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteCalculation(int id)
+        {
+            var equationToDelete = await _context.EquationSols.FindAsync(id);
+
+            if (equationToDelete != null)
+            {
+                _context.EquationSols.Remove(equationToDelete);
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToAction("ViewResults");
         }
 
     }

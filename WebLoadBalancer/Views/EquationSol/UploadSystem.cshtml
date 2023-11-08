@@ -9,6 +9,11 @@
     </div>
     <button type="submit" class="btn btn-primary">Solve</button>
 
+    
+</form>
+
+<form method="post" asp-action="CancelCalculation">
+    <button type="submit" class="btn btn-danger">Cancel</button>
 </form>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -20,6 +25,8 @@
 </div>
 
 <script>
+   
+    
     function connectToHub() {
         return new Promise(function (resolve, reject) {
             var connection = new signalR.HubConnectionBuilder().withUrl("/progressHub").build();
@@ -46,6 +53,8 @@
     }
 
     startProgressTracking();
+
+    
 </script>
 
 @if (ViewBag.SolutionData != null)
